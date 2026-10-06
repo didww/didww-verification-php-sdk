@@ -1,0 +1,56 @@
+{
+    "name": "didww/didww-verification-php-sdk",
+    "description": "PHP SDK for the DIDWW Verification API",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["didww", "verification", "otp", "sms", "phone"],
+    "authors": [
+        {
+            "name": "Kirill Paromonov",
+            "email": "kirill.p@didww.com"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/didww/didww-verification-php-sdk/issues",
+        "source": "https://github.com/didww/didww-verification-php-sdk"
+    },
+    "require": {
+        "php": ">=8.2",
+        "ext-json": "*",
+        "guzzlehttp/guzzle": "^7.15.2",
+        "guzzlehttp/psr7": "^2.12.3",
+        "psr/clock": "^1.0",
+        "psr/http-message": "^1.1 || ^2.0"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.64",
+        "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpunit/phpunit": "^11.5 || ^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Didww\\Verification\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Didww\\Verification\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "analyse": "phpstan analyse --memory-limit=1G",
+        "check-style": "php-cs-fixer fix --dry-run --diff",
+        "fix-style": "php-cs-fixer fix",
+        "ci": [
+            "@check-style",
+            "@analyse",
+            "@test"
+        ]
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable"
+}

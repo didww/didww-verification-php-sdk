@@ -1,0 +1,84 @@
+{
+    "vectors": [
+        {
+            "name": "start a verification",
+            "secret": "31m-CahIKK3u6hpRgs4-MGRtTm9_znlUWAzMNA_9_2s",
+            "method": "POST",
+            "contentType": "application/json",
+            "path": "/api/v1/verifications",
+            "timestamp": 1767225600,
+            "body": "{\"data\":{\"destination\":\"+15555550100\",\"delivery_method\":\"sms\",\"sms\":{\"languages\":[\"en-US\"]}}}",
+            "signature": "BsCRCSiIoYaCAx4e6zW6EiIlasXkKO9Hp0rRCkRnsQ8="
+        },
+        {
+            "name": "get a verification by id",
+            "secret": "31m-CahIKK3u6hpRgs4-MGRtTm9_znlUWAzMNA_9_2s",
+            "method": "GET",
+            "contentType": "",
+            "path": "/api/v1/verifications/0199a3c4-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+            "timestamp": 1767225601,
+            "body": null,
+            "signature": "YYWH3diq2yHqVw4FnhAxj6YfIMDTu0RzbhFmoFdbALI="
+        },
+        {
+            "name": "get a verification by number",
+            "secret": "31m-CahIKK3u6hpRgs4-MGRtTm9_znlUWAzMNA_9_2s",
+            "method": "GET",
+            "contentType": "",
+            "path": "/api/v1/verifications/by_number/15555550100",
+            "timestamp": 1767225602,
+            "body": null,
+            "signature": "b+o75b6NI5MX4LrWo2WouuSWWZ2VTjIPhEeFuWHipW4="
+        },
+        {
+            "name": "report a code by id",
+            "secret": "3Gv1lbjg4AoJG3g8ZPhlsmTRb8_dYjmL_PXX65E-xq4",
+            "method": "PATCH",
+            "contentType": "application/json",
+            "path": "/api/v1/verifications/0199a3c4-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+            "timestamp": 1767225603,
+            "body": "{\"data\":{\"delivery_method\":\"sms\",\"code\":\"123456\"}}",
+            "signature": "AVQS59i8KsEc8Ai182N1kA8cbtIUusghs0ekP5m5bmk="
+        },
+        {
+            "name": "report a code by number",
+            "secret": "3Gv1lbjg4AoJG3g8ZPhlsmTRb8_dYjmL_PXX65E-xq4",
+            "method": "PATCH",
+            "contentType": "application/json",
+            "path": "/api/v1/verifications/by_number/15555550100",
+            "timestamp": 1767225604,
+            "body": "{\"data\":{\"delivery_method\":\"sms\",\"code\":\"123456\"}}",
+            "signature": "/klPV2iwF2WLgFf1q8JGYqIbJELoUzwTw21Tw817Zjo="
+        },
+        {
+            "name": "callback to a URL with a path",
+            "secret": "3Gv1lbjg4AoJG3g8ZPhlsmTRb8_dYjmL_PXX65E-xq4",
+            "method": "POST",
+            "contentType": "application/json",
+            "path": "/webhooks/verification",
+            "timestamp": 1767225605,
+            "body": "{\"event\":\"verification_request\",\"data\":{\"id\":\"0199a3c4-5e6f-7a8b-9c0d-1e2f3a4b5c6d\",\"destination\":\"15555550100\",\"delivery_method\":\"sms\"}}",
+            "signature": "l2XcvVWAV1daqJ7fsS/rRhzB7aRH7WLopiFTu7wvG8I="
+        },
+        {
+            "name": "callback to a bare origin",
+            "secret": "3Gv1lbjg4AoJG3g8ZPhlsmTRb8_dYjmL_PXX65E-xq4",
+            "method": "POST",
+            "contentType": "application/json",
+            "path": "",
+            "timestamp": 1767225606,
+            "body": "{\"event\":\"verification_request\",\"data\":{\"id\":\"0199a3c4-5e6f-7a8b-9c0d-1e2f3a4b5c6d\",\"destination\":\"15555550100\",\"delivery_method\":\"sms\"}}",
+            "signature": "I19Pndt4VZ64GQ837VpySh5XsC/JASIIROOKjRfTzws="
+        },
+        {
+            "name": "get a verification by an id that needs encoding",
+            "secret": "31m-CahIKK3u6hpRgs4-MGRtTm9_znlUWAzMNA_9_2s",
+            "method": "GET",
+            "contentType": "",
+            "path": "/api/v1/verifications/not%20a%2Fuuid",
+            "timestamp": 1767225607,
+            "body": null,
+            "signature": "eukUr83Mz46Zpd0CNi6jOgwMdlbQfIoPKycjkVlBxoU="
+        }
+    ]
+}

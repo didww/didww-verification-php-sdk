@@ -1,0 +1,23 @@
+# A library pins nothing for its consumers; let them resolve freely.
+/vendor/
+/composer.lock
+
+/build/
+/.phpunit.cache/
+.phpunit.result.cache
+.php-cs-fixer.cache
+
+# The examples read credentials from the environment; keep local env files out.
+.env
+.env.*
+
+# Agent and editor scratch. Ignored here, not in a personal global config a clone
+# does not inherit.
+.omc/
+.omc-workspace
+.claude/
+CLAUDE.md
+AGENTS.md
+.idea/
+.vscode/
+.DS_Store
