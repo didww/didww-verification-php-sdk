@@ -45,7 +45,6 @@
     "denied_missing_callback_url",
     "dispatch_failed",
     "expired",
-    "stale_dispatch",
     "superseded",
     "too_many_attempts"
   ],

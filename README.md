@@ -164,6 +164,14 @@ new VerificationClient($auth, new ClientOptions(baseUrl: 'http://localhost:3000'
 adds its own `/api/v1` path, and a URL with another scheme, a path, a query or
 credentials throws `ConfigurationException`.
 
+## Testing
+
+Use the sandbox environment (`Environment::Sandbox`) with the reserved test numbers.
+`+12015550100` to `+12015550109` always succeed: the code is `1` repeated to the
+application's code length, for example `111111` for six digits. Other reserved ranges
+simulate failures. The full table is in
+[Testing on sandbox](https://doc.didww.com/otp-verification/testing.html).
+
 ## Authentication
 
 Three schemes, ranked `public < basic < application`. Each application has a minimum;
