@@ -43,6 +43,7 @@ $reason = $verifier->check(
     $body,
     $headers['x-timestamp'] ?? null,
     $headers['authorization'] ?? null,
+    $headers['x-signature-previous'] ?? null,
 );
 if (null !== $reason) {
     // The reason is for your logs only: echoing it tells a prober which check failed.
