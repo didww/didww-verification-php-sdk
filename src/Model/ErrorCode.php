@@ -32,7 +32,6 @@ enum ErrorCode: string
     case DispatchFailed = 'dispatch_failed';
     case Expired = 'expired';
     case TooManyAttempts = 'too_many_attempts';
-    case StaleDispatch = 'stale_dispatch';
     case ApplicationDeleted = 'application_deleted';
     case Superseded = 'superseded';
     case DeniedMissingCallbackUrl = 'denied_missing_callback_url';
@@ -51,7 +50,6 @@ enum ErrorCode: string
             self::DispatchFailed,
             self::Expired,
             self::TooManyAttempts,
-            self::StaleDispatch,
             self::ApplicationDeleted,
             self::Superseded,
             self::DeniedMissingCallbackUrl,

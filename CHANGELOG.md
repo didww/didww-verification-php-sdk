@@ -5,6 +5,18 @@ Notable changes to the DIDWW Verification SDK for PHP.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-10
+
+### Removed
+
+- **The `stale_dispatch` error code**, `ErrorCode::StaleDispatch`. The API reports these
+  failures as `dispatch_failed`. `errorCode` stays an open string, so a response that still
+  carries `stale_dispatch` decodes as before.
+
+### Docs
+
+- A Testing section on the sandbox environment and its reserved test numbers.
+
 ## [1.0.0] - 2026-10
 
 First release.
@@ -53,4 +65,5 @@ First release.
   reports never are, and should not be: the API has no idempotency key, a repeated start
   supersedes and charges again, and a repeated report consumes one of three attempts.
 
+[1.0.1]: https://github.com/didww/didww-verification-php-sdk/releases/tag/1.0.1
 [1.0.0]: https://github.com/didww/didww-verification-php-sdk/releases/tag/1.0.0

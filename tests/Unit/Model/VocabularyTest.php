@@ -26,11 +26,11 @@ final class VocabularyTest extends TestCase
             'validation_failed', 'internal_error',
         ];
         $outcome = [
-            'dispatch_failed', 'expired', 'too_many_attempts', 'stale_dispatch', 'application_deleted', 'superseded',
+            'dispatch_failed', 'expired', 'too_many_attempts', 'application_deleted', 'superseded',
             'denied_missing_callback_url', 'denied_by_callback', 'denied_invalid_callback_response',
         ];
 
-        yield 'error codes: 19 envelope + 9 outcome' => [[...$envelope, ...$outcome], array_column(ErrorCode::cases(), 'value')];
+        yield 'error codes: 19 envelope + 8 outcome' => [[...$envelope, ...$outcome], array_column(ErrorCode::cases(), 'value')];
         yield 'statuses' => [['pending', 'verified', 'failed', 'expired', 'denied'], array_column(VerificationStatus::cases(), 'value')];
         yield 'delivery methods' => [['sms', 'callout'], array_column(DeliveryMethod::cases(), 'value')];
     }
