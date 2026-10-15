@@ -5,6 +5,16 @@ Notable changes to the DIDWW Verification SDK for PHP.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Callback verification during secret rotation.** `CallbackVerifier::check()` and
+  `isValid()` take an optional `previousSignature` (the `x-signature-previous` header), and
+  `checkRequest()` reads it. A callback is accepted when either it or the `Authorization`
+  signature matches the configured secret. Upgrade before rotating a secret: an older
+  verifier reads only `Authorization`.
+
 ## [1.0.0] - 2026-10
 
 First release.

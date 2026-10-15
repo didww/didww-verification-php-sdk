@@ -56,9 +56,13 @@ final class CallbackVerifier
     /**
      * Returns null when the callback is authentic, otherwise why it is not.
      *
-     * @param string $rawBody the exact bytes received; a re-encoded body will not match
+     * During a secret rotation DIDWW also sends "x-signature-previous"; the callback is authentic
+     * when either it or the "Authorization" signature matches the configured secret.
+     *
+     * @param string      $rawBody           the exact bytes received; a re-encoded body will not match
+     * @param string|null $previousSignature the "x-signature-previous" header, if the request has one
      */
-    public function check(string $method, string $contentType, string $rawBody, ?string $timestamp, ?string $authorization): ?RejectionReason
+    public function check(string $method, string $contentType, string $rawBody, ?string $timestamp, ?string $authorization, ?string $previousSignature = null): ?RejectionReason
     {
         $signature = self::signature($authorization);
         if (null === $signature) {
@@ -79,12 +83,16 @@ final class CallbackVerifier
             Signer::stringToSign($method, $this->path, $contentType, $rawBody, $timestamp),
         );
 
-        return hash_equals($expected, $signature) ? null : RejectionReason::BadSignature;
+        // Both comparisons always run, so timing does not reveal which header matched.
+        $matchesCurrent = hash_equals($expected, $signature);
+        $matchesPrevious = hash_equals($expected, $previousSignature ?? '');
+
+        return $matchesCurrent || $matchesPrevious ? null : RejectionReason::BadSignature;
     }
 
-    public function isValid(string $method, string $contentType, string $rawBody, ?string $timestamp, ?string $authorization): bool
+    public function isValid(string $method, string $contentType, string $rawBody, ?string $timestamp, ?string $authorization, ?string $previousSignature = null): bool
     {
-        return null === $this->check($method, $contentType, $rawBody, $timestamp, $authorization);
+        return null === $this->check($method, $contentType, $rawBody, $timestamp, $authorization, $previousSignature);
     }
 
     /**
@@ -108,6 +116,7 @@ final class CallbackVerifier
             $body,
             $request->hasHeader('x-timestamp') ? $request->getHeaderLine('x-timestamp') : null,
             $request->hasHeader('Authorization') ? $request->getHeaderLine('Authorization') : null,
+            $request->hasHeader('x-signature-previous') ? $request->getHeaderLine('x-signature-previous') : null,
         );
     }
 

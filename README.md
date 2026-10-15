@@ -242,6 +242,7 @@ $reason = $verifier->check(
     $body,
     $headers['x-timestamp'] ?? null,
     $headers['authorization'] ?? null,
+    $headers['x-signature-previous'] ?? null,
 );
 if (null !== $reason) {
     error_log('DIDWW callback rejected: '.$reason->value);
@@ -254,8 +255,8 @@ header('Content-Type: application/json');
 echo isExpected($callback) ? CallbackResponse::allow() : CallbackResponse::deny();
 ```
 
-Where `getallheaders()` is unavailable, read `$_SERVER['HTTP_X_TIMESTAMP']` and
-`$_SERVER['HTTP_AUTHORIZATION']`. Some web server setups drop `Authorization` before
+Where `getallheaders()` is unavailable, read `$_SERVER['HTTP_X_TIMESTAMP']`,
+`$_SERVER['HTTP_AUTHORIZATION']` and `$_SERVER['HTTP_X_SIGNATURE_PREVIOUS']`. Some web server setups drop `Authorization` before
 it reaches PHP; make sure yours passes it through.
 
 ### PSR-7
@@ -281,6 +282,7 @@ Route::post('/callbacks/didww', function (Request $request) use ($verifier) {
         $request->getContent(),
         $request->header('x-timestamp'),
         $request->header('Authorization'),
+        $request->header('x-signature-previous'),
     );
     if (!$valid) {
         return response('', 401);
@@ -312,6 +314,7 @@ public function didwwCallback(Request $request): Response
         $request->getContent(),
         $request->headers->get('x-timestamp'),
         $request->headers->get('Authorization'),
+        $request->headers->get('x-signature-previous'),
     );
     if (!$valid) {
         return new Response('', 401);
@@ -323,6 +326,18 @@ public function didwwCallback(Request $request): Response
     return new Response($body, 200, ['Content-Type' => 'application/json']);
 }
 ```
+
+### Rotating the application secret
+
+While an application secret is being rotated, DIDWW also sends an `x-signature-previous`
+header: the same signature, made with the previous secret. The verifier accepts a callback
+when either signature matches the secret it is configured with, so a receiver can switch to
+the new secret at any time during the grace period, and one that still has the old secret
+keeps working until then. Pass the header as the last argument of `check()` and `isValid()`;
+`checkRequest()` reads it for you.
+
+Upgrade the SDK **before** rotating: an older verifier reads only `Authorization`, which is
+signed with the new secret.
 
 ### Answering
 
