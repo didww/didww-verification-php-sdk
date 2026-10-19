@@ -52,11 +52,13 @@ final class VerificationClient
      * Starts a verification. Never retried: a repeated start supersedes the live one and charges again.
      * Only the options block matching $method is sent; the other is dropped.
      *
+     * @param string|null $custom up to 4096 characters, delivered unchanged to your callback server as data.custom
+     *
      * @throws ApiException|TransportException|DecodingException|ConfigurationException
      */
-    public function startVerification(string $destination, DeliveryMethod $method, ?SmsOptions $sms = null, ?CalloutOptions $callout = null): Verification
+    public function startVerification(string $destination, DeliveryMethod $method, ?SmsOptions $sms = null, ?CalloutOptions $callout = null, ?string $custom = null): Verification
     {
-        return $this->execute($this->requests->start($destination, $method->value, $sms, $callout));
+        return $this->execute($this->requests->start($destination, $method->value, $sms, $callout, $custom));
     }
 
     /**

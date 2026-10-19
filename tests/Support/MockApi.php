@@ -101,7 +101,10 @@ final class MockApi
             'error_code' => null,
             'error_detail' => null,
             'expires_at' => '2026-01-01T00:05:00Z',
-            'sms' => ['template' => 'Your code is {code}', 'language' => 'en-US', 'interception_timeout' => 300, 'code_length' => 6],
+            'sms' => [
+                'template' => 'Your code is {code}', 'language' => 'en-US', 'interception_timeout' => 300, 'code_length' => 6,
+                'template_group' => null, 'template_group_used' => false, 'template_fallback_reason' => null,
+            ],
         ], $overrides);
 
         return new Response($status, ['Content-Type' => 'application/json'], json_encode(['data' => $data], \JSON_THROW_ON_ERROR));

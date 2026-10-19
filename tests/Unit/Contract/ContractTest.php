@@ -7,6 +7,7 @@ namespace Didww\Verification\Tests\Unit\Contract;
 use Didww\Verification\Environment;
 use Didww\Verification\Model\DeliveryMethod;
 use Didww\Verification\Model\ErrorCode;
+use Didww\Verification\Model\TemplateFallbackReason;
 use Didww\Verification\Model\VerificationStatus;
 use PHPUnit\Framework\TestCase;
 
@@ -30,7 +31,8 @@ final class ContractTest extends TestCase
 
     public function testErrorCodesEqualTheEnvelopeAndOutcomeCodes(): void
     {
-        $expected = [...self::strings('envelopeErrorCodes'), ...self::strings('verificationErrorCodes')];
+        // destination_not_supported_for_channel is in both lists and is one case.
+        $expected = array_values(array_unique([...self::strings('envelopeErrorCodes'), ...self::strings('verificationErrorCodes')]));
 
         self::assertSameSet($expected, array_column(ErrorCode::cases(), 'value'));
     }
@@ -43,6 +45,11 @@ final class ContractTest extends TestCase
     public function testStatusesEqualTheContract(): void
     {
         self::assertSameSet(self::strings('statuses'), array_column(VerificationStatus::cases(), 'value'));
+    }
+
+    public function testTemplateFallbackReasonsEqualTheContract(): void
+    {
+        self::assertSameSet(self::strings('templateFallbackReasons'), array_column(TemplateFallbackReason::cases(), 'value'));
     }
 
     public function testDeliveryMethodsEqualTheContract(): void

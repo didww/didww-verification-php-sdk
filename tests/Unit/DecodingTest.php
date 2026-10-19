@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Didww\Verification\Tests\Unit;
 
+use Didww\Verification\Exception\DecodingException;
+use Didww\Verification\Model\Autofill;
 use Didww\Verification\Model\DeliveryMethod;
 use Didww\Verification\Model\ErrorCode;
+use Didww\Verification\Model\TemplateFallbackReason;
 use Didww\Verification\Model\VerificationStatus;
 use Didww\Verification\Tests\Support\MockApi;
 use GuzzleHttp\Psr7\Response;
@@ -18,6 +21,8 @@ final class DecodingTest extends TestCase
     {
         $api = new MockApi([MockApi::verification(['sms' => [
             'template' => 'Your code is {code}', 'language' => 'en-US', 'interception_timeout' => 300, 'code_length' => 6, 'app_hash' => 'FA+9qCX9VSu',
+            'autofill' => ['type' => 'app_hash', 'value' => 'FA+9qCX9VSu'],
+            'template_group' => 'checkout', 'template_group_used' => false, 'template_fallback_reason' => 'language_missing',
         ]], 201)]);
 
         $v = $api->client->startVerification('+15555550100', DeliveryMethod::Sms);
@@ -39,13 +44,20 @@ final class DecodingTest extends TestCase
         self::assertSame(300, $v->sms->interceptionTimeout);
         self::assertSame(6, $v->sms->codeLength);
         self::assertSame('FA+9qCX9VSu', $v->sms->appHash);
+        self::assertEquals(Autofill::appHash('FA+9qCX9VSu'), $v->sms->autofill);
+        self::assertSame('checkout', $v->sms->templateGroup);
+        self::assertFalse($v->sms->templateGroupUsed);
+        self::assertSame('language_missing', $v->sms->templateFallbackReason);
+        self::assertSame(TemplateFallbackReason::LanguageMissing, $v->sms->templateFallbackReasonEnum());
         self::assertNull($v->callout);
         self::assertSame('0.0125', $v->raw['fee']);
     }
 
     public function testDecodesACalloutVerification(): void
     {
-        $api = new MockApi([MockApi::verification(['delivery_method' => 'callout', 'sms' => null, 'callout' => ['language' => 'de-DE', 'code_length' => 4]])]);
+        $api = new MockApi([MockApi::verification(['delivery_method' => 'callout', 'sms' => null, 'callout' => [
+            'language' => 'de-DE', 'code_length' => 4, 'template_group' => 'checkout', 'template_group_used' => true, 'template_fallback_reason' => null,
+        ]])]);
 
         $v = $api->client->getVerification(MockApi::ID);
 
@@ -53,6 +65,49 @@ final class DecodingTest extends TestCase
         self::assertNotNull($v->callout);
         self::assertSame('de-DE', $v->callout->language);
         self::assertSame(4, $v->callout->codeLength);
+        self::assertSame('checkout', $v->callout->templateGroup);
+        self::assertTrue($v->callout->templateGroupUsed);
+        self::assertNull($v->callout->templateFallbackReason);
+        self::assertNull($v->callout->templateFallbackReasonEnum());
+    }
+
+    public function testDomainAutofillCarriesTheDomainAndNoAppHash(): void
+    {
+        $api = new MockApi([MockApi::verification(['sms' => [
+            'template' => null, 'language' => 'en-US', 'interception_timeout' => 300, 'code_length' => 6,
+            'autofill' => ['type' => 'domain', 'value' => 'example.com'],
+            'template_group' => null, 'template_group_used' => false, 'template_fallback_reason' => null,
+        ]])]);
+
+        $sms = $api->client->getVerification(MockApi::ID)->sms;
+
+        self::assertNotNull($sms);
+        self::assertEquals(new Autofill('domain', 'example.com'), $sms->autofill);
+        self::assertNull($sms->appHash);
+    }
+
+    public function testUnknownTemplateFallbackReasonIsKept(): void
+    {
+        $api = new MockApi([MockApi::verification(['sms' => [
+            'template' => null, 'language' => 'en-US', 'interception_timeout' => 300, 'code_length' => 6,
+            'template_group' => 'checkout', 'template_group_used' => false, 'template_fallback_reason' => 'future_reason',
+        ]])]);
+
+        $sms = $api->client->getVerification(MockApi::ID)->sms;
+
+        self::assertNotNull($sms);
+        self::assertSame('future_reason', $sms->templateFallbackReason);
+        self::assertNull($sms->templateFallbackReasonEnum());
+        self::assertNull($sms->autofill);
+    }
+
+    public function testMissingTemplateGroupUsedIsADecodingError(): void
+    {
+        $api = new MockApi([MockApi::verification(['sms' => ['template' => null, 'language' => null, 'interception_timeout' => 300, 'code_length' => 6]])]);
+
+        $this->expectException(DecodingException::class);
+
+        $api->client->getVerification(MockApi::ID);
     }
 
     /**
@@ -63,6 +118,9 @@ final class DecodingTest extends TestCase
         yield 'failed' => ['failed', 'too_many_attempts'];
         yield 'expired' => ['expired', 'expired'];
         yield 'denied' => ['denied', 'denied_by_callback'];
+        yield 'paused' => ['denied', 'application_paused'];
+        yield 'country disabled' => ['denied', 'destination_country_disabled'];
+        yield 'not supported' => ['failed', 'destination_not_supported_for_channel'];
     }
 
     #[DataProvider('outcomes')]
@@ -70,7 +128,10 @@ final class DecodingTest extends TestCase
     {
         $api = new MockApi([MockApi::verification([
             'status' => $status, 'error_code' => $errorCode, 'error_detail' => 'detail', 'fee' => null, 'expires_at' => null,
-            'sms' => ['template' => null, 'language' => null, 'interception_timeout' => 300, 'code_length' => 6],
+            'sms' => [
+                'template' => null, 'language' => null, 'interception_timeout' => 300, 'code_length' => 6,
+                'template_group' => null, 'template_group_used' => false, 'template_fallback_reason' => null,
+            ],
         ])]);
 
         $v = $api->client->reportVerification(MockApi::ID, DeliveryMethod::Sms, '000000');

@@ -9,6 +9,7 @@ use Didww\Verification\Auth\BasicAuth;
 use Didww\Verification\Auth\PublicAuth;
 use Didww\Verification\Auth\Secret;
 use Didww\Verification\Exception\ConfigurationException;
+use Didww\Verification\Model\Autofill;
 use Didww\Verification\Model\DeliveryMethod;
 use Didww\Verification\Request\CalloutOptions;
 use Didww\Verification\Request\SmsOptions;
@@ -17,6 +18,7 @@ use Didww\Verification\Tests\Support\MockApi;
 use Didww\Verification\VerificationClient;
 use Didww\Verification\Version;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 
@@ -176,18 +178,72 @@ final class VerificationClientTest extends TestCase
     {
         $api = new MockApi([MockApi::verification(status: 201), MockApi::verification(status: 201), MockApi::verification(status: 201)]);
 
-        $api->client->startVerification('+15555550100', DeliveryMethod::Sms, new SmsOptions(appHash: 'FA+9qCX9VSu'), new CalloutOptions(['de-DE']));
+        $api->client->startVerification('+15555550100', DeliveryMethod::Sms, new SmsOptions(autofill: Autofill::appHash('FA+9qCX9VSu')), new CalloutOptions(['de-DE']));
         $api->client->startVerification('+15555550100', DeliveryMethod::Callout, new SmsOptions(['pl-PL']), new CalloutOptions(['de-DE']));
         $api->client->startVerification('+15555550100', DeliveryMethod::Sms, new SmsOptions());
 
         self::assertSame(
             [
-                '{"data":{"destination":"+15555550100","delivery_method":"sms","sms":{"app_hash":"FA+9qCX9VSu"}}}',
+                '{"data":{"destination":"+15555550100","delivery_method":"sms","sms":{"autofill":{"type":"app_hash","value":"FA+9qCX9VSu"}}}}',
                 '{"data":{"destination":"+15555550100","delivery_method":"callout","callout":{"languages":["de-DE"]}}}',
                 '{"data":{"destination":"+15555550100","delivery_method":"sms","sms":{}}}',
             ],
             array_map(static fn (RequestInterface $r): string => (string) $r->getBody(), $api->requests()),
         );
+    }
+
+    public function testStartSendsAutofillTemplateGroupAndCustom(): void
+    {
+        $api = new MockApi([MockApi::verification(status: 201), MockApi::verification(status: 201), MockApi::verification(status: 201)]);
+
+        $api->client->startVerification('+15555550100', DeliveryMethod::Sms, new SmsOptions(autofill: Autofill::domain(), templateGroup: 'checkout'), custom: 'order-42');
+        $api->client->startVerification('+15555550100', DeliveryMethod::Sms, new SmsOptions(autofill: Autofill::none()));
+        $api->client->startVerification('+15555550100', DeliveryMethod::Callout, callout: new CalloutOptions(templateGroup: 'checkout'));
+
+        self::assertSame(
+            [
+                '{"data":{"destination":"+15555550100","delivery_method":"sms","sms":{"autofill":{"type":"domain"},"template_group":"checkout"},"custom":"order-42"}}',
+                '{"data":{"destination":"+15555550100","delivery_method":"sms","sms":{"autofill":{"type":"none"}}}}',
+                '{"data":{"destination":"+15555550100","delivery_method":"callout","callout":{"template_group":"checkout"}}}',
+            ],
+            array_map(static fn (RequestInterface $r): string => (string) $r->getBody(), $api->requests()),
+        );
+    }
+
+    public function testDeprecatedAppHashIsSentAsAutofill(): void
+    {
+        $api = new MockApi([MockApi::verification(status: 201)]);
+
+        $options = new SmsOptions(appHash: 'FA+9qCX9VSu');
+        $api->client->startVerification('+15555550100', DeliveryMethod::Sms, $options);
+
+        self::assertEquals(Autofill::appHash('FA+9qCX9VSu'), $options->autofill);
+        self::assertSame(
+            '{"data":{"destination":"+15555550100","delivery_method":"sms","sms":{"autofill":{"type":"app_hash","value":"FA+9qCX9VSu"}}}}',
+            (string) $api->lastRequest()->getBody(),
+        );
+    }
+
+    #[IgnoreDeprecations]
+    public function testDeprecatedAppHashTriggersADeprecation(): void
+    {
+        $this->expectUserDeprecationMessage('SmsOptions $appHash is deprecated; use $autofill: Autofill::appHash().');
+
+        new SmsOptions(appHash: 'FA+9qCX9VSu');
+    }
+
+    public function testDeprecatedAppHashWithAutofillIsRejected(): void
+    {
+        $this->expectException(ConfigurationException::class);
+
+        new SmsOptions(appHash: 'FA+9qCX9VSu', autofill: Autofill::domain());
+    }
+
+    public function testDeprecatedAppHashWithAnEqualAutofillIsRejected(): void
+    {
+        $this->expectException(ConfigurationException::class);
+
+        new SmsOptions(appHash: 'FA+9qCX9VSu', autofill: Autofill::appHash('FA+9qCX9VSu'));
     }
 
     public function testEmptyIdIsRejectedBeforeSending(): void

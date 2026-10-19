@@ -22,6 +22,14 @@ final class CallbackPayloadTest extends TestCase
         self::assertSame('15555550100', $request->destination);
         self::assertSame('sms', $request->deliveryMethod);
         self::assertSame(DeliveryMethod::Sms, $request->deliveryMethodEnum());
+        self::assertNull($request->custom);
+    }
+
+    public function testParsesCustom(): void
+    {
+        $request = CallbackRequest::fromJson('{"event":"verification_request","data":{"id":"x","destination":"15555550100","delivery_method":"sms","custom":"order-42"}}');
+
+        self::assertSame('order-42', $request->custom);
     }
 
     public function testUnknownDeliveryMethodIsKept(): void
@@ -41,6 +49,7 @@ final class CallbackPayloadTest extends TestCase
         yield 'no data' => ['{"event":"verification_request"}'];
         yield 'no event' => ['{"data":{"id":"x","destination":"1","delivery_method":"sms"}}'];
         yield 'id not a string' => ['{"event":"e","data":{"id":1,"destination":"1","delivery_method":"sms"}}'];
+        yield 'custom not a string' => ['{"event":"e","data":{"id":"x","destination":"1","delivery_method":"sms","custom":42}}'];
     }
 
     #[DataProvider('malformedBodies')]

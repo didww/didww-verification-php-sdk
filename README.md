@@ -112,13 +112,14 @@ Options travel in a block named after the channel. Only the block matching the
 delivery method is sent: options for the other channel are dropped.
 
 ```php
+use Didww\Verification\Model\Autofill;
 use Didww\Verification\Request\CalloutOptions;
 use Didww\Verification\Request\SmsOptions;
 
 $client->startVerification(
     '+15555550100',
     DeliveryMethod::Sms,
-    sms: new SmsOptions(languages: ['pl-PL', 'en-US'], appHash: 'AbCdEfGhIjK'),
+    sms: new SmsOptions(languages: ['pl-PL', 'en-US'], autofill: Autofill::appHash('AbCdEfGhIjK')),
 );
 
 $client->startVerification(
@@ -132,22 +133,69 @@ Languages are BCP 47 tags, tried in order, falling back to `en-US`. **Send the r
 subtag.** A bare primary subtag like `pl` passes validation and then silently falls
 back, because the catalogue is matched on the exact canonical tag.
 
-`appHash` is the Android SMS Retriever app hash, added to the message so the app can
-read the code without the SMS permission. A malformed hash rejects the whole start
-with 422 and `app_hash_invalid`.
+SMS autofill is set with `autofill`. `Autofill::appHash($hash)` adds the Android SMS
+Retriever app hash, so the app can read the code without the SMS permission; a malformed
+hash rejects the whole start with 422 and `app_hash_invalid`. `Autofill::domain()` adds a
+domain-bound line for the application's configured SMS domain, and is refused with
+`sms_domain_not_configured` when there is none. `Autofill::none()` sends no marker, and
+leaving it unset uses the application default. A malformed `autofill` is refused with
+`autofill_invalid`.
+
+The `appHash:` option and `SmsInfo::$appHash` still work but are deprecated in favour of
+`autofill`. The option is sent as `Autofill::appHash()`, and passing it together with `autofill`
+throws `ConfigurationException`.
 
 The response reports what was actually used, so a fallback is detected rather than
 guessed at:
 
 ```php
 $verification->sms?->language;            // the tag the message was rendered in
-$verification->sms?->appHash;             // echoed back when a hash was stored
+$verification->sms?->autofill;            // echoed back when a hash or domain marker was stored
 $verification->sms?->interceptionTimeout; // seconds the SMS Retriever stays armed
 $verification->callout?->language;        // the tag the announcement is played in
 ```
 
 The two catalogues are separate: a tag with an SMS template may still have no
-recording. Both blocks also carry `codeLength`, the generated code's length.
+recording. Both blocks also carry `codeLength`, the generated code's length. For
+`domain`, `autofill->value` is the domain.
+
+### Template groups
+
+`templateGroup` picks one of your template groups instead of the application's default.
+An unknown name is refused with `template_group_not_found`.
+
+```php
+new SmsOptions(templateGroup: 'checkout');
+new CalloutOptions(templateGroup: 'checkout');
+```
+
+Both `sms` and `callout` in the response report what happened:
+
+```php
+$verification->sms?->templateGroup;          // the group applied, or null
+$verification->sms?->templateGroupUsed;      // true when the group's template was used
+$verification->sms?->templateFallbackReason; // why not: language_missing, version_pending, ...
+```
+
+When no template group applies at all, `templateGroupUsed` is `false` and
+`templateFallbackReason` is `null`. `group_missing` comes with `templateGroup` `null`: the
+requested or default group no longer exists.
+
+`templateFallbackReason` is an open vocabulary: `templateFallbackReasonEnum()` returns the
+matching `TemplateFallbackReason` case, or `null` for a reason added later.
+
+## Passing data to your callback
+
+`custom` is a free-text string of up to 4096 characters, sent at the top level of the
+request rather than inside a channel block:
+
+```php
+$client->startVerification('+15555550100', DeliveryMethod::Sms, custom: 'order-42');
+```
+
+It reaches your callback server unchanged as `CallbackRequest::$custom` and is not
+returned by any response. Longer values are refused with `custom_too_long`; an empty
+string is treated as unset.
 
 ## Environments
 
@@ -242,6 +290,7 @@ $reason = $verifier->check(
     $body,
     $headers['x-timestamp'] ?? null,
     $headers['authorization'] ?? null,
+    $headers['x-signature-previous'] ?? null,
 );
 if (null !== $reason) {
     error_log('DIDWW callback rejected: '.$reason->value);
@@ -254,9 +303,10 @@ header('Content-Type: application/json');
 echo isExpected($callback) ? CallbackResponse::allow() : CallbackResponse::deny();
 ```
 
-Where `getallheaders()` is unavailable, read `$_SERVER['HTTP_X_TIMESTAMP']` and
-`$_SERVER['HTTP_AUTHORIZATION']`. Some web server setups drop `Authorization` before
-it reaches PHP; make sure yours passes it through.
+Where `getallheaders()` is unavailable, read `$_SERVER['HTTP_X_TIMESTAMP']`,
+`$_SERVER['HTTP_AUTHORIZATION']` and `$_SERVER['HTTP_X_SIGNATURE_PREVIOUS']`. Some web
+server setups drop `Authorization` before it reaches PHP; make sure yours passes it
+through.
 
 ### PSR-7
 
@@ -281,6 +331,7 @@ Route::post('/callbacks/didww', function (Request $request) use ($verifier) {
         $request->getContent(),
         $request->header('x-timestamp'),
         $request->header('Authorization'),
+        $request->header('x-signature-previous'),
     );
     if (!$valid) {
         return response('', 401);
@@ -312,6 +363,7 @@ public function didwwCallback(Request $request): Response
         $request->getContent(),
         $request->headers->get('x-timestamp'),
         $request->headers->get('Authorization'),
+        $request->headers->get('x-signature-previous'),
     );
     if (!$valid) {
         return new Response('', 401);
@@ -324,6 +376,18 @@ public function didwwCallback(Request $request): Response
 }
 ```
 
+### Rotating the application secret
+
+While an application secret is being rotated, DIDWW also sends an `x-signature-previous`
+header: the same signature, made with the previous secret. The verifier accepts a callback
+when either signature matches the secret it is configured with, so a receiver can switch to
+the new secret at any time during the grace period, and one that still has the old secret
+keeps working until then. Pass the header as the last argument of `check()` and `isValid()`;
+`checkRequest()` reads it for you.
+
+Upgrade the SDK **before** rotating: an older verifier reads only `Authorization`, which is
+signed with the new secret.
+
 ### Answering
 
 Answer a verified callback with `CallbackResponse::allow()` or
@@ -332,9 +396,12 @@ a `RejectionReason` (`MissingSignature`, `MissingTimestamp`, `MalformedTimestamp
 `StaleTimestamp`, `BadSignature`) for your logs. Never echo it in the response: it
 tells a prober which check failed.
 
-`CallbackRequest::fromJson()` exposes `event`, `id`, `destination` and
-`deliveryMethod`, and throws `DecodingException` for a body it cannot read. Verify the
-request before trusting any of them.
+`CallbackRequest::fromJson()` exposes `event`, `id`, `destination`, `deliveryMethod`
+and `custom` (`null` when the start passed none), and throws `DecodingException` for a
+body it cannot read. Verify the request before trusting any of them.
+
+**Treat `custom` as untrusted.** When the start request comes from a mobile app, the app
+controls it, so check it against your own records instead of acting on it as given.
 
 ## Errors
 
@@ -381,13 +448,29 @@ response can carry several errors (a validation failure returns one per field), 
 `codes()` and `hasCode()`, not `errors[0]`. `code` is a stable slug to switch on;
 `detail` is fixed prose to display, never to parse.
 
+Some starts are refused as an outcome rather than an error: a 201 whose `status` is
+`denied` or `failed`, with `errorCode` set to `application_paused`,
+`destination_country_disabled` or `destination_not_supported_for_channel`. An unsupported
+destination (no country, no delivery for the channel, or a blocked range) is one of these
+`failed` verifications, not a 422.
+
 A non-2xx whose body is not JSON still throws the status-mapped exception with empty
 `errors`, so an error page from a proxy surfaces as the server error it is.
 
-A start too soon after a non-denied one for the same destination is refused with 429
-and `destination_in_cooldown`, as `RateLimitedException`. The SDK never retries it:
-wait `retryAfter` seconds (`null` when the response carried no usable `Retry-After`
-header), then start again yourself.
+A 429 throws `RateLimitedException`, and its code says which limit was hit:
+
+- `destination_in_cooldown`: a verification for this destination was requested too
+  recently.
+- `rate_limit_per_ip`: too many requests from this IP address.
+- `rate_limit_failed_auth`: too many failed authentication attempts from this IP address.
+- `rate_limit_per_account`: too many requests for this account.
+- `rate_limit_public_per_account`: too many public requests for this account.
+- `volume_limit_reached`: the application reached its daily or monthly verification limit
+  for this delivery method. `Retry-After` can be long (days): surface it to the user
+  instead of retrying, or contact support to raise the limit.
+
+The SDK never retries a 429: wait `retryAfter` seconds (`null` when the response carried
+no usable `Retry-After` header), then try again yourself.
 
 ```php
 use Didww\Verification\Exception\RateLimitedException;
