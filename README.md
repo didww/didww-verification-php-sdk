@@ -212,6 +212,21 @@ new VerificationClient($auth, new ClientOptions(baseUrl: 'http://localhost:3000'
 adds its own `/api/v1` path, and a URL with another scheme, a path, a query or
 credentials throws `ConfigurationException`.
 
+## Testing
+
+The sandbox environment sends no real SMS and places no real calls. Select it with
+`Environment::Sandbox`:
+
+```php
+new VerificationClient($auth, new ClientOptions(environment: Environment::Sandbox));
+```
+
+Only the reserved test numbers get an outcome: each gives a fixed result, such as
+delivered, failed or expired, and a delivered one has a fixed code. A verification to any
+other number ends with status `failed` and error code `dispatch_failed`. The test numbers,
+their outcomes and the code to submit are listed in
+[Testing on sandbox](https://doc.didww.com/otp-verification/testing.html).
+
 ## Authentication
 
 Three schemes, ranked `public < basic < application`. Each application has a minimum;
@@ -465,9 +480,9 @@ A 429 throws `RateLimitedException`, and its code says which limit was hit:
 - `rate_limit_failed_auth`: too many failed authentication attempts from this IP address.
 - `rate_limit_per_account`: too many requests for this account.
 - `rate_limit_public_per_account`: too many public requests for this account.
-- `volume_limit_reached`: the application reached its daily or monthly verification limit
-  for this delivery method. `Retry-After` can be long (days): surface it to the user
-  instead of retrying, or contact support to raise the limit.
+- `volume_limit_reached`: the application reached its daily or monthly verification limit.
+  `Retry-After` can be long (days): surface it to the user instead of retrying, or contact
+  support to raise the limit.
 
 The SDK never retries a 429: wait `retryAfter` seconds (`null` when the response carried
 no usable `Retry-After` header), then try again yourself.

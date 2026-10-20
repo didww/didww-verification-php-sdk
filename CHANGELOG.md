@@ -35,12 +35,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   address), `rate_limit_failed_auth` (too many failed authentication attempts from this IP
   address), `rate_limit_per_account` (too many requests for this account),
   `rate_limit_public_per_account` (too many public requests for this account) and
-  `volume_limit_reached` (the application reached its daily or monthly verification limit
-  for this delivery method). All throw `RateLimitedException`.
+  `volume_limit_reached` (the application reached its daily or monthly verification limit).
+  All throw `RateLimitedException`.
 
 - **New outcome codes:** `application_paused` and `destination_country_disabled` (status
   `denied`), and `destination_not_supported_for_channel` (status `failed`).
   `ErrorCode::outcomeCodes()` lists all three.
+
+- **Docs:** a Testing section on the sandbox environment, which sends nothing and gives an
+  outcome only for the reserved test numbers.
 
 ### Changed
 
