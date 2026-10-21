@@ -42,8 +42,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   `denied`), and `destination_not_supported_for_channel` (status `failed`).
   `ErrorCode::outcomeCodes()` lists all three.
 
-- **Docs:** a Testing section on the sandbox environment, which sends nothing and gives an
-  outcome only for the reserved test numbers.
+- **Docs:** a Testing section on the sandbox environment, which sends nothing and gives a
+  predefined result only for the reserved test numbers.
 
 ### Changed
 
