@@ -13,6 +13,7 @@ use Didww\Verification\Exception\RateLimitedException;
 use Didww\Verification\Exception\ServerException;
 use Didww\Verification\Exception\UnauthorizedException;
 use Didww\Verification\Exception\ValidationException;
+use Didww\Verification\Model\Autofill;
 use Didww\Verification\Model\CalloutInfo;
 use Didww\Verification\Model\SmsInfo;
 use Didww\Verification\Model\Verification;
@@ -147,6 +148,19 @@ final class ResponseDecoder
         return $value;
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
+    private static function requiredBool(array $data, string $field): bool
+    {
+        $value = $data[$field] ?? null;
+        if (!\is_bool($value)) {
+            throw new DecodingException(\sprintf('Field "%s" is missing or not a boolean.', $field));
+        }
+
+        return $value;
+    }
+
     private static function fee(mixed $value, string $body): ?string
     {
         if (null === $value || \is_string($value)) {
@@ -212,14 +226,33 @@ final class ResponseDecoder
         }
         /** @var array<string, mixed> $fields */
         $fields = $block;
+        $autofill = self::autofill($fields['autofill'] ?? null);
 
         return new SmsInfo(
             template: self::optionalString($fields, 'template'),
             language: self::optionalString($fields, 'language'),
             interceptionTimeout: self::requiredInt($fields, 'interception_timeout'),
             codeLength: self::requiredInt($fields, 'code_length'),
-            appHash: self::optionalString($fields, 'app_hash'),
+            appHash: 'app_hash' === $autofill?->type ? $autofill->value : null,
+            templateGroup: self::optionalString($fields, 'template_group'),
+            templateGroupUsed: self::requiredBool($fields, 'template_group_used'),
+            templateFallbackReason: self::optionalString($fields, 'template_fallback_reason'),
+            autofill: $autofill,
         );
+    }
+
+    private static function autofill(mixed $block): ?Autofill
+    {
+        if (null === $block) {
+            return null;
+        }
+        if (!\is_array($block)) {
+            throw new DecodingException('Field "autofill" is not an object.');
+        }
+        /** @var array<string, mixed> $fields */
+        $fields = $block;
+
+        return new Autofill(self::requiredString($fields, 'type'), self::optionalString($fields, 'value'));
     }
 
     private static function callout(mixed $block): ?CalloutInfo
@@ -236,6 +269,9 @@ final class ResponseDecoder
         return new CalloutInfo(
             language: self::optionalString($fields, 'language'),
             codeLength: self::requiredInt($fields, 'code_length'),
+            templateGroup: self::optionalString($fields, 'template_group'),
+            templateGroupUsed: self::requiredBool($fields, 'template_group_used'),
+            templateFallbackReason: self::optionalString($fields, 'template_fallback_reason'),
         );
     }
 }

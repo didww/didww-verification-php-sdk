@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Didww\Verification\Tests\Unit\Callback;
 
+use Didww\Verification\Auth\Secret;
 use Didww\Verification\Callback\CallbackVerifier;
 use Didww\Verification\Callback\RejectionReason;
 use Didww\Verification\Exception\ConfigurationException;
+use Didww\Verification\Signing\Signer;
 use Didww\Verification\Tests\Support\FakeClock;
 use Didww\Verification\Tests\Support\MockApi;
 use GuzzleHttp\Psr7\NoSeekStream;
@@ -139,6 +141,90 @@ final class CallbackVerifierTest extends TestCase
         self::assertSame(RejectionReason::StaleTimestamp, self::verifier(offset: 301)->check('POST', 'application/json', $v['body'], $ts, $auth));
         self::assertNull(self::verifier(offset: 10, tolerance: 10)->check('POST', 'application/json', $v['body'], $ts, $auth));
         self::assertSame(RejectionReason::StaleTimestamp, self::verifier(offset: 1, tolerance: 0)->check('POST', 'application/json', $v['body'], $ts, $auth));
+    }
+
+    /**
+     * The signature a different (rotated-in) secret makes over the same callback: the
+     * configured secret is the vector's, so this one can never match the verifier directly.
+     */
+    private static function signedWithAnotherSecret(): string
+    {
+        $v = self::withPath();
+        $other = new Secret(self::vector('start a verification')['secret']);
+
+        return Signer::sign(
+            $other->key(),
+            Signer::stringToSign($v['method'], $v['path'], $v['contentType'], $v['body'], $v['timestamp']),
+        );
+    }
+
+    public function testCurrentSignatureIsAcceptedWithAPreviousSignatureAlongside(): void
+    {
+        $v = self::withPath();
+        $previous = self::signedWithAnotherSecret();
+
+        self::assertNull(self::verifier()->check('POST', 'application/json', $v['body'], (string) $v['timestamp'], self::authorization($v['signature']), $previous));
+        self::assertTrue(self::verifier()->isValid('POST', 'application/json', $v['body'], (string) $v['timestamp'], self::authorization($v['signature']), $previous));
+    }
+
+    public function testPreviousSignatureIsAcceptedWhenTheConfiguredSecretIsTheOldOne(): void
+    {
+        $v = self::withPath();
+        $newSecretSignature = self::signedWithAnotherSecret();
+
+        self::assertNull(self::verifier()->check('POST', 'application/json', $v['body'], (string) $v['timestamp'], self::authorization($newSecretSignature), $v['signature']));
+        self::assertTrue(self::verifier()->isValid('POST', 'application/json', $v['body'], (string) $v['timestamp'], self::authorization($newSecretSignature), $v['signature']));
+    }
+
+    public function testNeitherSignatureMatching(): void
+    {
+        $v = self::withPath();
+        $wrong = self::authorization(base64_encode(str_repeat("\0", 32)));
+        $other = self::signedWithAnotherSecret();
+
+        self::assertSame(RejectionReason::BadSignature, self::verifier()->check('POST', 'application/json', $v['body'], (string) $v['timestamp'], $wrong, $other));
+        self::assertFalse(self::verifier()->isValid('POST', 'application/json', $v['body'], (string) $v['timestamp'], self::authorization($other), $other));
+    }
+
+    public function testAbsentOrEmptyPreviousSignatureBehavesAsBefore(): void
+    {
+        $v = self::withPath();
+        $ts = (string) $v['timestamp'];
+        $wrong = self::authorization(self::signedWithAnotherSecret());
+
+        foreach ([null, ''] as $previous) {
+            self::assertNull(self::verifier()->check('POST', 'application/json', $v['body'], $ts, self::authorization($v['signature']), $previous));
+            self::assertSame(RejectionReason::BadSignature, self::verifier()->check('POST', 'application/json', $v['body'], $ts, $wrong, $previous));
+        }
+    }
+
+    public function testAuthorizationIsStillRequiredWithAMatchingPreviousSignature(): void
+    {
+        $v = self::withPath();
+
+        self::assertSame(RejectionReason::MissingSignature, self::verifier()->check('POST', 'application/json', $v['body'], (string) $v['timestamp'], null, $v['signature']));
+    }
+
+    public function testStaleTimestampIsRejectedEvenWithAMatchingPreviousSignature(): void
+    {
+        $v = self::withPath();
+        $wrong = self::authorization(self::signedWithAnotherSecret());
+
+        self::assertSame(RejectionReason::StaleTimestamp, self::verifier(offset: 301)->check('POST', 'application/json', $v['body'], (string) $v['timestamp'], $wrong, $v['signature']));
+    }
+
+    public function testPsr7RequestPassesThePreviousSignatureHeader(): void
+    {
+        $v = self::withPath();
+        $request = new ServerRequest('POST', 'https://example.com/webhooks/verification', [
+            'Content-Type' => 'application/json',
+            'x-timestamp' => (string) $v['timestamp'],
+            'Authorization' => self::authorization(self::signedWithAnotherSecret()),
+        ], $v['body']);
+
+        self::assertSame(RejectionReason::BadSignature, self::verifier()->checkRequest($request));
+        self::assertNull(self::verifier()->checkRequest($request->withHeader('x-signature-previous', $v['signature'])));
+        self::assertTrue(self::verifier()->isValidRequest($request->withHeader('X-Signature-Previous', $v['signature'])));
     }
 
     public function testPsr7RequestAfterTheBodyWasAlreadyRead(): void

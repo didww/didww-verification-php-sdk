@@ -13,11 +13,16 @@ use Didww\Verification\Model\DeliveryMethod;
  */
 final class CallbackRequest
 {
+    /**
+     * @param string|null $custom the value passed to startVerification(); null when none was given.
+     *                            A mobile app controls it, so check it against your own records.
+     */
     public function __construct(
         public readonly string $event,
         public readonly string $id,
         public readonly string $destination,
         public readonly string $deliveryMethod,
+        public readonly ?string $custom = null,
     ) {
     }
 
@@ -49,8 +54,12 @@ final class CallbackRequest
             }
             $strings[$field] = $value;
         }
+        $custom = $data['custom'] ?? null;
+        if (null !== $custom && !\is_string($custom)) {
+            throw new DecodingException('Callback field "custom" is not a string.', $rawBody);
+        }
 
-        return new self($strings['event'], $strings['id'], $strings['destination'], $strings['delivery_method']);
+        return new self($strings['event'], $strings['id'], $strings['destination'], $strings['delivery_method'], $custom);
     }
 
     public function deliveryMethodEnum(): ?DeliveryMethod

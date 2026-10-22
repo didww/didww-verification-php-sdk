@@ -27,7 +27,7 @@ final class RequestFactory
     {
     }
 
-    public function start(string $destination, string $deliveryMethod, ?SmsOptions $sms, ?CalloutOptions $callout): RequestInterface
+    public function start(string $destination, string $deliveryMethod, ?SmsOptions $sms, ?CalloutOptions $callout, ?string $custom = null): RequestInterface
     {
         $data = ['destination' => $destination, 'delivery_method' => $deliveryMethod];
         if (null !== $sms && 'sms' === $deliveryMethod) {
@@ -35,6 +35,9 @@ final class RequestFactory
         }
         if (null !== $callout && 'callout' === $deliveryMethod) {
             $data['callout'] = (object) $callout->toArray();
+        }
+        if (null !== $custom) {
+            $data['custom'] = $custom;
         }
 
         return $this->request('POST', self::PREFIX, $data);

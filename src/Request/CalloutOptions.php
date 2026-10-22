@@ -10,10 +10,12 @@ namespace Didww\Verification\Request;
 final class CalloutOptions
 {
     /**
-     * @param array<string>|null $languages BCP 47 tags in order of preference, e.g. "pl-PL"
+     * @param array<string>|null $languages     BCP 47 tags in order of preference, e.g. "pl-PL"
+     * @param string|null        $templateGroup a template group to use instead of the application's default
      */
     public function __construct(
         public readonly ?array $languages = null,
+        public readonly ?string $templateGroup = null,
     ) {
     }
 
@@ -24,6 +26,9 @@ final class CalloutOptions
      */
     public function toArray(): array
     {
-        return null === $this->languages ? [] : ['languages' => array_values($this->languages)];
+        return array_filter(
+            ['languages' => null === $this->languages ? null : array_values($this->languages), 'template_group' => $this->templateGroup],
+            static fn (mixed $value): bool => null !== $value,
+        );
     }
 }
