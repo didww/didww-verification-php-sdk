@@ -39,6 +39,7 @@
     "destination_in_cooldown",
     "destination_invalid",
     "destination_not_supported_for_channel",
+    "destination_prefix_rate_limited",
     "internal_error",
     "languages_invalid",
     "not_found",

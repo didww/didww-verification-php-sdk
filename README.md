@@ -482,6 +482,9 @@ A 429 throws `RateLimitedException`, and its code says which limit was hit:
 - `volume_limit_reached`: the application reached its daily or monthly verification limit.
   `Retry-After` can be long (days): surface it to the user instead of retrying, or contact
   support to raise the limit.
+- `destination_prefix_rate_limited`: too many verifications to this number range; try again
+  later. Wait `Retry-After`, and show the user something like "Too many verification
+  requests right now. Please try again later."
 
 The SDK never retries a 429: wait `retryAfter` seconds (`null` when the response carried
 no usable `Retry-After` header), then try again yourself.
