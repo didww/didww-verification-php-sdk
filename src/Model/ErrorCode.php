@@ -38,6 +38,7 @@ enum ErrorCode: string
     case RateLimitPerAccount = 'rate_limit_per_account';
     case RateLimitPublicPerAccount = 'rate_limit_public_per_account';
     case VolumeLimitReached = 'volume_limit_reached';
+    case DestinationPrefixRateLimited = 'destination_prefix_rate_limited';
     case DispatchFailed = 'dispatch_failed';
     case Expired = 'expired';
     case TooManyAttempts = 'too_many_attempts';

@@ -159,6 +159,20 @@ final class ErrorResponsesTest extends TestCase
         self::assertCount(1, $api->requests());
     }
 
+    public function testDestinationPrefixRateLimitedIsRateLimitedWithRetryAfter(): void
+    {
+        $api = new MockApi([MockApi::errors(429, [['code' => 'destination_prefix_rate_limited', 'detail' => 'too many verifications to this number range; try again later']], ['Retry-After' => '120'])]);
+
+        try {
+            $api->client->startVerification('+15555550100', DeliveryMethod::Sms);
+            self::fail('expected an exception');
+        } catch (RateLimitedException $e) {
+            self::assertSame(120, $e->retryAfter);
+            self::assertSame(ErrorCode::DestinationPrefixRateLimited, $e->errors[0]->codeEnum());
+        }
+        self::assertCount(1, $api->requests());
+    }
+
     public function testRateLimitedWithoutUsableRetryAfter(): void
     {
         foreach ([[], ['Retry-After' => 'Wed, 21 Oct 2026 07:28:00 GMT'], ['Retry-After' => '-1'], ['Retry-After' => '12345678901']] as $headers) {

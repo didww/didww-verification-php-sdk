@@ -27,6 +27,7 @@ final class VocabularyTest extends TestCase
             'parameter_missing', 'not_found', 'unauthorized', 'balance_insufficient', 'destination_in_cooldown',
             'validation_failed', 'internal_error', 'rate_limit_per_ip', 'rate_limit_failed_auth', 'rate_limit_per_account',
             'rate_limit_public_per_account', 'volume_limit_reached',
+            'destination_prefix_rate_limited',
         ];
         $outcome = [
             'dispatch_failed', 'expired', 'too_many_attempts', 'stale_dispatch', 'application_deleted', 'superseded',
@@ -34,7 +35,7 @@ final class VocabularyTest extends TestCase
             'destination_country_disabled',
         ];
 
-        yield 'error codes: 28 envelope + 11 outcome-only' => [[...$envelope, ...$outcome], array_column(ErrorCode::cases(), 'value')];
+        yield 'error codes: 29 envelope + 11 outcome-only' => [[...$envelope, ...$outcome], array_column(ErrorCode::cases(), 'value')];
         yield 'outcome codes: 12, one shared with the envelope' => [
             [...$outcome, 'destination_not_supported_for_channel'], array_column(ErrorCode::outcomeCodes(), 'value'),
         ];

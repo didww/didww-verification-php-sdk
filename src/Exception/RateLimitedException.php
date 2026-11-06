@@ -14,6 +14,7 @@ namespace Didww\Verification\Exception;
  * - rate_limit_public_per_account: too many public requests for this account.
  * - volume_limit_reached: the application reached its daily or monthly verification limit.
  *   Retry-After can be long (days); surface it instead of retrying.
+ * - destination_prefix_rate_limited: too many verifications to this number range; try again later.
  *
  * Wait the number of seconds in $retryAfter before trying again.
  *
