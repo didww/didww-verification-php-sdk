@@ -112,6 +112,18 @@ final class ErrorResponsesTest extends TestCase
         }
     }
 
+    public function testChannelBlockedIsAValidationFailure(): void
+    {
+        $api = new MockApi([MockApi::errors(422, [['code' => 'channel_blocked', 'detail' => 'delivery method is blocked for this account']])]);
+
+        try {
+            $api->client->startVerification('+15555550100', DeliveryMethod::Sms);
+            self::fail('expected an exception');
+        } catch (ValidationException $e) {
+            self::assertSame(ErrorCode::ChannelBlocked, $e->errors[0]->codeEnum());
+        }
+    }
+
     public function testTransportMessageHidesTheDestinationNumber(): void
     {
         $request = new Request('GET', 'https://example.com/api/v1/verifications/by_number/15555550100');
@@ -155,6 +167,20 @@ final class ErrorResponsesTest extends TestCase
         } catch (RateLimitedException $e) {
             self::assertSame(42, $e->retryAfter);
             self::assertSame(ErrorCode::DestinationInCooldown, $e->errors[0]->codeEnum());
+        }
+        self::assertCount(1, $api->requests());
+    }
+
+    public function testDestinationPrefixRateLimitedIsRateLimitedWithRetryAfter(): void
+    {
+        $api = new MockApi([MockApi::errors(429, [['code' => 'destination_prefix_rate_limited', 'detail' => 'too many verifications to this number range; try again later']], ['Retry-After' => '120'])]);
+
+        try {
+            $api->client->startVerification('+15555550100', DeliveryMethod::Sms);
+            self::fail('expected an exception');
+        } catch (RateLimitedException $e) {
+            self::assertSame(120, $e->retryAfter);
+            self::assertSame(ErrorCode::DestinationPrefixRateLimited, $e->errors[0]->codeEnum());
         }
         self::assertCount(1, $api->requests());
     }

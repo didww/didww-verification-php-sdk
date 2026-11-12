@@ -462,6 +462,9 @@ response can carry several errors (a validation failure returns one per field), 
 `codes()` and `hasCode()`, not `errors[0]`. `code` is a stable slug to switch on;
 `detail` is fixed prose to display, never to parse.
 
+A start is refused with a 422 and `channel_blocked` when the account can't use the requested
+delivery method. No verification is created; contact DIDWW support.
+
 Some starts are refused as an outcome rather than an error: a 201 whose `status` is
 `denied` or `failed`, with `errorCode` set to `application_paused`,
 `destination_country_disabled` or `destination_not_supported_for_channel`. An unsupported
@@ -482,6 +485,9 @@ A 429 throws `RateLimitedException`, and its code says which limit was hit:
 - `volume_limit_reached`: the application reached its daily or monthly verification limit.
   `Retry-After` can be long (days): surface it to the user instead of retrying, or contact
   support to raise the limit.
+- `destination_prefix_rate_limited`: too many verifications to this number range; try again
+  later. Wait `Retry-After`, and show the user something like "Too many verification
+  requests right now. Please try again later."
 
 The SDK never retries a 429: wait `retryAfter` seconds (`null` when the response carried
 no usable `Retry-After` header), then try again yourself.

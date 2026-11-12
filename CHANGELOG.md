@@ -5,6 +5,17 @@ Notable changes to the DIDWW Verification SDK for PHP.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - Unreleased
+
+### Added
+
+- **New 429 error code `destination_prefix_rate_limited`** (too many verifications to this
+  number range; try again later), as `ErrorCode::DestinationPrefixRateLimited`. It throws
+  `RateLimitedException` and carries `Retry-After`. The SDK does not retry it: wait
+  `retryAfter` seconds, then start again.
+- **`channel_blocked`** error code. A start can be refused with a 422 carrying it when the
+  account can't use the requested delivery method. Contact DIDWW support.
+
 ## [1.1.0] - 2026-10
 
 ### Added
@@ -114,5 +125,6 @@ First release.
   reports never are, and should not be: the API has no idempotency key, a repeated start
   supersedes and charges again, and a repeated report consumes one of three attempts.
 
+[1.2.0]: https://github.com/didww/didww-verification-php-sdk/releases/tag/1.2.0
 [1.1.0]: https://github.com/didww/didww-verification-php-sdk/releases/tag/1.1.0
 [1.0.0]: https://github.com/didww/didww-verification-php-sdk/releases/tag/1.0.0
