@@ -112,6 +112,18 @@ final class ErrorResponsesTest extends TestCase
         }
     }
 
+    public function testChannelBlockedIsAValidationFailure(): void
+    {
+        $api = new MockApi([MockApi::errors(422, [['code' => 'channel_blocked', 'detail' => 'delivery method is blocked for this account']])]);
+
+        try {
+            $api->client->startVerification('+15555550100', DeliveryMethod::Sms);
+            self::fail('expected an exception');
+        } catch (ValidationException $e) {
+            self::assertSame(ErrorCode::ChannelBlocked, $e->errors[0]->codeEnum());
+        }
+    }
+
     public function testTransportMessageHidesTheDestinationNumber(): void
     {
         $request = new Request('GET', 'https://example.com/api/v1/verifications/by_number/15555550100');

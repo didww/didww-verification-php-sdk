@@ -39,6 +39,8 @@ enum ErrorCode: string
     case RateLimitPublicPerAccount = 'rate_limit_public_per_account';
     case VolumeLimitReached = 'volume_limit_reached';
     case DestinationPrefixRateLimited = 'destination_prefix_rate_limited';
+    /** The account can't use the requested delivery method; a start is refused with a 422. Contact DIDWW support. */
+    case ChannelBlocked = 'channel_blocked';
     case DispatchFailed = 'dispatch_failed';
     case Expired = 'expired';
     case TooManyAttempts = 'too_many_attempts';

@@ -462,6 +462,9 @@ response can carry several errors (a validation failure returns one per field), 
 `codes()` and `hasCode()`, not `errors[0]`. `code` is a stable slug to switch on;
 `detail` is fixed prose to display, never to parse.
 
+A start is refused with a 422 and `channel_blocked` when the account can't use the requested
+delivery method. No verification is created; contact DIDWW support.
+
 Some starts are refused as an outcome rather than an error: a 201 whose `status` is
 `denied` or `failed`, with `errorCode` set to `application_paused`,
 `destination_country_disabled` or `destination_not_supported_for_channel`. An unsupported

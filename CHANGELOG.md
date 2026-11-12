@@ -13,6 +13,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   number range; try again later), as `ErrorCode::DestinationPrefixRateLimited`. It throws
   `RateLimitedException` and carries `Retry-After`. The SDK does not retry it: wait
   `retryAfter` seconds, then start again.
+- **`channel_blocked`** error code. A start can be refused with a 422 carrying it when the
+  account can't use the requested delivery method. Contact DIDWW support.
 
 ## [1.1.0] - 2026-10
 

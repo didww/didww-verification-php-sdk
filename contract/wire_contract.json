@@ -29,6 +29,7 @@
     "app_hash_invalid",
     "autofill_invalid",
     "balance_insufficient",
+    "channel_blocked",
     "code_blank",
     "code_invalid",
     "custom_too_long",
